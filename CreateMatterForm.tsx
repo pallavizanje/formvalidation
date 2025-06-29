@@ -87,6 +87,7 @@ export default function CreateMatterForm() {
             console.log('Successfully created matter', values);
             setSubmitSuccess(true);
             resetForm();
+            setTermsAccepted(false);
           }
         }}
       >
@@ -100,15 +101,23 @@ export default function CreateMatterForm() {
           handleBlur,
           setFieldValue,
           submitForm,
+          resetForm,
         }) => {
           /** ------------------------------------------------------
-           *  Handlers within Formik context
+           *  Local helpers within Formik context
            *  ------------------------------------------------------ */
+          const wrappedHandleChange: React.ChangeEventHandler<
+            HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+          > = (e) => {
+            setSubmitSuccess(false); // hide success banner on any edit
+            handleChange(e);
+          };
+
           const handleCreateClick = () => {
             if (isValid && dirty) {
               openTermsModal();
             } else {
-              submitForm(); // trigger built‑in validation messages
+              submitForm(); // trigger validation messages
             }
           };
 
@@ -116,6 +125,12 @@ export default function CreateMatterForm() {
             setTermsAccepted(true);
             closeTermsModal();
             setTimeout(() => submitForm(), 0); // submit after modal closes
+          };
+
+          const handleReset = () => {
+            resetForm();
+            setSubmitSuccess(false);
+            setTermsAccepted(false);
           };
 
           return (
@@ -135,7 +150,7 @@ export default function CreateMatterForm() {
                     value={values.gpn}
                     onChange={(e) => {
                       const val = e.target.value;
-                      handleChange(e);
+                      wrappedHandleChange(e);
                       handleGpnChange(val, setFieldValue);
                     }}
                     onBlur={handleBlur}
@@ -214,7 +229,7 @@ export default function CreateMatterForm() {
                     id="comment"
                     rows={3}
                     value={values.comment}
-                    onChange={handleChange}
+                    onChange={wrappedHandleChange}
                     onBlur={handleBlur}
                     className="p-2 rounded-2xl shadow-md w-full border focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -225,15 +240,24 @@ export default function CreateMatterForm() {
                   )}
                 </div>
 
-                {/* Submit button */}
-                <button
-                  type="button"
-                  onClick={handleCreateClick}
-                  className="w-full bg-blue-600 text-white font-semibold py-2 rounded-2xl shadow-lg disabled:bg-gray-400 transition-opacity"
-                  disabled={!dirty || !isValid}
-                >
-                  Create Matter
-                </button>
+                {/* Action buttons */}
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={handleCreateClick}
+                    className="flex-1 bg-blue-600 text-white font-semibold py-2 rounded-2xl shadow-lg disabled:bg-gray-400 transition-opacity"
+                    disabled={!dirty || !isValid}
+                  >
+                    Create Matter
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    className="flex-1 bg-gray-300 text-gray-800 font-semibold py-2 rounded-2xl shadow-inner hover:bg-gray-400 transition-colors"
+                  >
+                    Reset
+                  </button>
+                </div>
               </Form>
 
               {/* Terms & Conditions Modal */}
@@ -253,9 +277,7 @@ export default function CreateMatterForm() {
                     </p>
                     <div className="flex justify-end gap-4">
                       <button
-                        onClick={() => {
-                          closeTermsModal();
-                        }}
+                        onClick={closeTermsModal}
                         className="px-4 py-2 rounded-2xl bg-red-500 text-white shadow-md hover:bg-red-600 transition-colors"
                       >
                         Reject
