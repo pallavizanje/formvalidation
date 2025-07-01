@@ -23,8 +23,9 @@ interface DetailsResponse {
   country: string;
 }
 
-const mock = <T,>(data: T, ms = 400) =>
-  new Promise<T>((res) => setTimeout(() => res(data), ms));
+const mock = (<T,>(data: T, ms = 400) =>
+  new Promise<T>((res) => setTimeout(() => res(data), ms)));
+
 
 const fetchInstanceRegions = (): Promise<RegionResponse> =>
   mock({ item: ["A", "R", "C"] });
