@@ -1,59 +1,35 @@
-@PostMapping(value = "/{targetSystemId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-public ResponseEntity<Response> handleFormUpload(
-        @RequestParam("file") MultipartFile file,
-        @PathVariable("targetSystemId") Integer targetSystemId
-) {
-    try {
-        LOGGER.info("UploadExcel called with targetSystemId: {}", targetSystemId);
+@RestController
+@RequestMapping("/api/excel")
+public class ExcelUploadController {
 
-        // NEW: Capture validation messages from the service
-        List<String> validationErrors = service.headExcelAndCollectErrors(file, targetSystemId);
+    @PostMapping("/upload")
+    public ResponseEntity<DQFrameworkUpdateResponse> upload(@RequestBody MultipartFile file) {
 
-        if (!validationErrors.isEmpty()) {
+        // prepare the wrapper we always return
+        DQFrameworkUpdateResponse resp = new DQFrameworkUpdateResponse();
+
+        try {
+            excelService.process(file);                 // <- your business logic
+            resp.setSuccess(true);
+            resp.setMessage("Data created/updated successfully");
+
+            return ResponseEntity.ok(resp);            // HTTP 200
+        }
+        catch (IllegalStateException | IOException ex) { // fine‑grained catch if you want
+            resp.setSuccess(false);
+            resp.setMessage(ex.getMessage());          // bubble up *just* the message
+
             return ResponseEntity
-                    .badRequest()
-                    .body(new Response(false, "Validation failed", validationErrors));
+                    .status(HttpStatus.BAD_REQUEST)    // 400 or 422 if validation‑type errors
+                    .body(resp);
         }
+        catch (Exception ex) {                         // fallback for anything unexpected
+            resp.setSuccess(false);
+            resp.setMessage("Internal error: " + ex.getMessage());
 
-        return ResponseEntity.ok(
-                new Response(true, "Data created/updated successfully")
-        );
-
-    } catch (Exception e) {
-        LOGGER.error("Unexpected error occurred: ", e);
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new Response(false, "Unexpected error: " + e.getMessage()));
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR) // 500
+                    .body(resp);
+        }
     }
-}
-
-
-public List<String> headExcelAndCollectErrors(MultipartFile file, Integer targetSystemId)
-        throws IOException {
-    List<String> errors = new ArrayList<>();
-    XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream());
-    XSSFSheet sheet = workbook.getSheetAt(0);
-
-    for (int rowIndex = 1; rowIndex < sheet.getPhysicalNumberOfRows(); rowIndex++) {
-        XSSFRow row = sheet.getRow(rowIndex);
-
-        if (row == null) {
-            errors.add("Row " + (rowIndex + 1) + " is empty");
-            continue;
-        }
-
-        Cell feedNameCell = row.getCell(0);
-        if (feedNameCell == null || feedNameCell.getCellType() == CellType.BLANK) {
-            errors.add("Row " + (rowIndex + 1) + ", Column 1 (Feed Name) is missing");
-        }
-
-        Cell indicatorCell = row.getCell(1);
-        if (indicatorCell == null || indicatorCell.getCellType() == CellType.BLANK) {
-            errors.add("Row " + (rowIndex + 1) + ", Column 2 (Indicator) is missing");
-        }
-
-        // Add more validations for other columns as needed...
-    }
-
-    return errors;
 }
