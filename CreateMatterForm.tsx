@@ -244,3 +244,15 @@ const CreateMatterForm: React.FC = () => {
 };
 
 export default CreateMatterForm;
+
+onSubmit={(values, helpers) => {
+  formikHelpersRef.current = helpers;
+  if (termsAccepted) {
+    console.log("Successfully created matter", values);
+    toast.success("Matter created successfully!");
+    setSubmitSuccess(true);
+    helpers.resetForm();
+    setTermsAccepted(false);
+  }
+}}
+
